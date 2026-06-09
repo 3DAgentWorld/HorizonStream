@@ -139,7 +139,7 @@ print(predictions.keys())
 HorizonStream can run directly on a video with `--video-path`, or on image sequences prepared in the `generalizable` layout.
 
 <details>
-<summary>Directory layout and dataset sources</summary>
+<summary>Directory layout, dataset sources, and outputs</summary>
 
 ```text
 <meta_root>/
@@ -179,6 +179,20 @@ python scripts/kitti_to_generalizable.py --src /path/to/kitti_odometry_root --ou
 python scripts/waymo_to_generalizable.py --src /path/to/waymo_meta_root --out /path/to/meta_root
 python scripts/vbr_processed_to_generalizable.py --src /path/to/vbr_processed_root --out /path/to/meta_root
 ```
+
+**Outputs**
+
+For each sequence, HorizonStream writes:
+
+- `poses/abs_pose.txt`: online `w2c` poses.
+- `poses/offline_abs_pose.txt`: offline motion-averaged poses, when enabled.
+- `poses/loop_abs_pose.txt`: loop-closure poses, when loop closure is run.
+- `poses/intri.txt`: intrinsics.
+- `depth/dpt/`, `depth/conf/`: predicted depth and confidence.
+- `images/rgb/`, `images/rgb.mp4`: RGB exports.
+- `points/full.ply`: global point cloud.
+- `points/full_lc.ply`: loop-closure global point cloud, when available.
+- `points/fused.ply`, `points/fused_lc.ply`: optional depth-fused point clouds from `scripts/post_depthfusion.py`.
 
 </details>
 
@@ -289,20 +303,6 @@ python scripts/post_depthfusion.py \
 ```
 
 By default, depth fusion uses loop-closure poses when available and online poses otherwise.
-
-### Outputs
-
-For each sequence, HorizonStream writes:
-
-- `poses/abs_pose.txt`: online `w2c` poses.
-- `poses/offline_abs_pose.txt`: offline motion-averaged poses, when enabled.
-- `poses/loop_abs_pose.txt`: loop-closure poses, when loop closure is run.
-- `poses/intri.txt`: intrinsics.
-- `depth/dpt/`, `depth/conf/`: predicted depth and confidence.
-- `images/rgb/`, `images/rgb.mp4`: RGB exports.
-- `points/full.ply`: global point cloud.
-- `points/full_lc.ply`: loop-closure global point cloud, when available.
-- `points/fused.ply`, `points/fused_lc.ply`: optional depth-fused point clouds from `scripts/post_depthfusion.py`.
 
 ## Demo
 

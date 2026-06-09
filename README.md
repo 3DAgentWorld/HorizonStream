@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/teaser_v7.png" alt="HorizonStream teaser" width="960">
-</p>
-
 # HorizonStream: Long-Horizon Attention for Streaming 3D Reconstruction
 
 <p align="center">
@@ -14,7 +10,7 @@
   <a href="https://huggingface.co/spaces/NicolasCC/HorizonStream_Demo"><img src="https://img.shields.io/badge/🤗%20Demo-HorizonStream-ffd21e?style=flat-square" alt="Demo"></a>
 </p>
 
-<video src="https://github.com/user-attachments/assets/5d24ec97-25f3-4ee5-99ad-8d755915b906" poster="https://raw.githubusercontent.com/3DAgentWorld/HorizonStream/main/assets/teaser_v7.png" controls width="960"></video>
+<video src="https://github.com/user-attachments/assets/becfe603-004e-49fc-91be-e5fc92740b6b" controls width="960"></video>
 
 ## Summary
 

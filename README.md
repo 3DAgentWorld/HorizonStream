@@ -5,11 +5,13 @@
 # HorizonStream: Long-Horizon Attention for Streaming 3D Reconstruction
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2605.23889"><img src="https://img.shields.io/badge/arXiv-2605.23889-red?style=for-the-badge" alt="arXiv"></a>
-  <a href="https://3dagentworld.github.io/horizonstream/"><img src="https://img.shields.io/badge/Project_Page-Website-blue?style=for-the-badge" alt="Project Page"></a>
-  <a href="https://github.com/user-attachments/assets/5d24ec97-25f3-4ee5-99ad-8d755915b906"><img src="https://img.shields.io/badge/Demo-Video-green?style=for-the-badge" alt="Demo Video"></a>
-  <a href="https://huggingface.co/NicolasCC/HorizonStream"><img src="https://img.shields.io/badge/Model-Hugging_Face-orange?style=for-the-badge" alt="Model"></a>
-  <a href="https://huggingface.co/spaces/NicolasCC/HorizonStream_Demo"><img src="https://img.shields.io/badge/Demo-HuggingFace_Space-yellow?style=for-the-badge" alt="Demo"></a>
+  <a href="https://arxiv.org/abs/2605.23889"><img src="https://img.shields.io/badge/arXiv-2605.23889-b31b1b?style=flat-square&logo=arxiv&logoColor=white" alt="arXiv"></a>
+  &nbsp;
+  <a href="https://3dagentworld.github.io/horizonstream/"><img src="https://img.shields.io/badge/Project_Page-online-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Project Page"></a>
+  &nbsp;
+  <a href="https://huggingface.co/NicolasCC/HorizonStream"><img src="https://img.shields.io/badge/🤗%20Weights-HorizonStream-ffd21e?style=flat-square" alt="Weights"></a>
+  &nbsp;
+  <a href="https://huggingface.co/spaces/NicolasCC/HorizonStream_Demo"><img src="https://img.shields.io/badge/🤗%20Demo-HorizonStream-ffd21e?style=flat-square" alt="Demo"></a>
 </p>
 
 https://github.com/user-attachments/assets/5d24ec97-25f3-4ee5-99ad-8d755915b906

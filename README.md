@@ -134,7 +134,8 @@ with torch.no_grad(), torch.cuda.amp.autocast(enabled=device == "cuda", dtype=to
 print(predictions.keys())
 ```
 
-## Inputs and Dataset Format
+<details>
+<summary><b>Inputs and Dataset Format</b></summary>
 
 HorizonStream can run directly on a video with `--video-path`, or on image sequences prepared in the `generalizable` layout.
 
@@ -176,6 +177,8 @@ python scripts/kitti_to_generalizable.py --src /path/to/kitti_odometry_root --ou
 python scripts/waymo_to_generalizable.py --src /path/to/waymo_meta_root --out /path/to/meta_root
 python scripts/vbr_processed_to_generalizable.py --src /path/to/vbr_processed_root --out /path/to/meta_root
 ```
+
+</details>
 
 ## Checkpoints
 

@@ -134,10 +134,12 @@ with torch.no_grad(), torch.cuda.amp.autocast(enabled=device == "cuda", dtype=to
 print(predictions.keys())
 ```
 
-<details>
-<summary><b>Inputs and Dataset Format</b></summary>
+## Inputs and Dataset Format
 
 HorizonStream can run directly on a video with `--video-path`, or on image sequences prepared in the `generalizable` layout.
+
+<details>
+<summary>Directory layout and dataset sources</summary>
 
 ```text
 <meta_root>/

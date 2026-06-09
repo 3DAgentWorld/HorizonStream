@@ -1,0 +1,195 @@
+device: cuda
+
+model:
+  checkpoint: checkpoints/HorizonStream.pt
+  strict_load: true
+  hf:
+    repo_id: null
+    filename: null
+    revision: null
+    local_dir: checkpoints
+  horizonstream_cfg:
+    load_pretrained: false
+    use_xyz_head: false
+    enable_metric_readout_token: true
+    frames_chunk_size: 1
+    use_chunkwise_checkpoint: true
+    
+    agg_regator_cfg:
+      patch_embed: dinov2_vitl14_reg
+      img_size: 518
+      patch_size: 14
+      embed_dim: 1024
+      intermediate_layer_idx: [4, 11, 17, 23]
+      num_heads: 16
+      depth: 24
+      gate_attn: headwise
+      rope_type: 3d
+      rope_temporal_period: 21
+      fuse_grm_priori: false
+      num_pose_tokens: 32
+      use_register_token: false
+      chunk_block_num: 3
+      global_attn_arch: gla
+      global_attn_impl: softmax
+      gla_expand_v: 1.0
+      gla_use_short_conv: true
+      gla_conv_size: 4
+      gla_conv_bias: false
+      gla_allow_neg_eigval: false
+      gla_norm_eps: 1.0e-5
+      gla_serial_layers: [4, 11, 17, 23]
+
+    cam_decoder_cfg:
+      pose_encoding_type: absT_quaR_FoV
+      dim_in: 2048
+
+    metric_readout_head_cfg:
+      hidden_dims: [256, 128]
+      init_bias: 0.0
+
+    dpt_decoder_cfg:
+      dim_in: 2048
+      output_dim: 2
+      activation: exp
+      conf_activation: expp1
+      intermediate_layer_idx: [4, 11, 17, 23]
+
+inference:
+  window_size: 10
+  sliding_size: 21
+  offload_outputs_to_cpu: false
+  enable_offline_motion_averaging: false
+
+data:
+  format: generalizable
+  img_path: null
+  video_path: null
+  video_sample_fps: null
+  video_stride: 1
+  video_scene_name: null
+  video_cache_root: null
+  video_overwrite: true
+  data_roots_file: data_roots.txt
+  seq_list: null
+  seq_match_mode: exact
+  camera: null
+  stride: 1
+  max_frames: null
+  size: 518
+  crop: true
+  patch_size: 14
+  camera_preprocess: false
+  camera_preprocess_strict: true
+  undistort_backend: colmap
+  undistort_dist_opt_k: false
+  undistort_safe_bound: 4
+  undistort_center_crop: true
+
+output:
+  root: outputs_horizonstream
+  abs_pose_source: online
+  save_videos: true
+  save_points: true
+  save_frame_points: false
+  save_depth: true
+  save_depth_conf: true
+  save_images: true
+  mask_sky: true
+  skyseg_path: checkpoints/skyseg.onnx
+  point_mask_sky: true
+  point_depth_min: null
+  point_depth_max: 40
+  point_depth_percentile_min: null
+  point_depth_percentile_max: null
+  point_sky_color_filter: true
+  point_sky_white_threshold: 240
+  point_sky_bright_any_threshold: 200
+  point_sky_blue_b_min: 155
+  point_sky_blue_r_max: 195
+  point_sky_blue_g_min: 100
+  point_sky_blue_rg_diff_max: 95
+  point_sky_blue_bg_diff_min: 8
+  point_sky_blue_br_diff_min: 15
+  point_outlier_filter: true
+  point_radius_outlier_radius: 0.10
+  point_radius_outlier_min_points: 16
+  point_voxel_size: null
+  point_random_sample_ratio: null
+  max_full_pointcloud_points: null
+  max_frame_pointcloud_points: null
+
+online_loop:
+  methods: [salad]
+  salad_ckpt_path: weights/dino_salad.ckpt
+  salad_dino_weights_path: weights/dinov2_vitb14_pretrain.pth
+  salad_backbone: dinov2_vitb14
+  salad_image_size: [336, 336]
+  salad_batch_size: 32
+  salad_score_thresh: 0.85
+  retrieval_top_k: 5
+  orb_features: 4096
+  temporal_exclusion: 10
+  nms_radius: 25
+  min_frame_separation: 30
+  loop_chunk_size: 6
+  max_candidates: 1000
+  max_reinfer_candidates: 50
+  edge_mode: relative_pose
+  pose_graph_backend: pypose
+  pose_graph_model: se3
+  pose_graph_update_mode: all
+  pose_graph_loop_weight: 0.01
+  pose_graph_trans_weight: 1.0
+  pose_graph_rot_weight: 1.0
+  pose_graph_scale_weight: 1.0
+  pose_graph_inlier_cap: 512
+  pose_graph_max_iterations: 30
+  pose_graph_lambda_init: 1.0e-6
+  pose_graph_solver_verbose: false
+  verbose: true
+
+online_loop_groups:
+  kitti:
+    salad_score_thresh: 0.85
+    retrieval_top_k: 3
+    temporal_exclusion: 10
+    min_frame_separation: 30
+    nms_radius: 25
+    loop_chunk_size: 10
+    max_reinfer_candidates: 50
+    pose_graph_loop_weight: 0.01
+    pose_graph_trans_weight: 1.0
+    pose_graph_rot_weight: 1.0
+    pose_graph_inlier_cap: 512
+
+  vbr:
+    salad_score_thresh: 0.85
+    retrieval_top_k: 3
+    temporal_exclusion: 300
+    min_frame_separation: 300
+    nms_radius: 100
+    loop_chunk_size: 6
+    max_candidates: 300
+    max_reinfer_candidates: 0
+    dbow_direct_loop_edges: true
+    dbow_direct_max_edges: 300
+    dbow_direct_inliers: 20
+    loop_edge_score_threshold: 0.025
+    pose_graph_loop_weight: 0.01
+    pose_graph_trans_weight: 2.0
+    pose_graph_rot_weight: 1.2
+    pose_graph_inlier_cap: 512
+
+  cyber:
+    salad_score_thresh: 0.85
+    retrieval_top_k: 3
+    temporal_exclusion: 10
+    min_frame_separation: 30
+    nms_radius: 25
+    loop_chunk_size: 10
+    max_reinfer_candidates: 50
+    pose_graph_loop_weight: 0.04
+    pose_graph_trans_weight: 1.0
+    pose_graph_rot_weight: 1.2
+    pose_graph_inlier_cap: 512

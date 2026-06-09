@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Model weights & checkpoints
+weights/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+*.safetensors
+
+# Outputs
+outputs_horizonstream/
+outputs/
+
+# Media
+assets/github.mp4
+
+# Misc
+.DS_Store
+*.log

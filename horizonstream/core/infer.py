@@ -416,6 +416,7 @@ def run_inference_cfg(cfg: dict):
             offline_cam_map = motion_maps.get("offline_cam_map", None)
             last_cam_map = motion_maps.get("last_cam_map", None)
             lag_cam_map = motion_maps.get("lag_cam_map", None)
+            offline_error = motion_maps.get("offline_cam_map_error", "")
             if abs_pose_source not in {"online", "offline"}:
                 raise ValueError(f"output.abs_pose_source must be 'online' or 'offline', got: {abs_pose_source}")
             if abs_pose_source == "offline" and offline_cam_map is not None:

@@ -19,6 +19,7 @@ DEFAULT_CHECKPOINT = os.getenv("HORIZONSTREAM_CHECKPOINT", "checkpoints/HorizonS
 DEFAULT_DEVICE = os.getenv("HORIZONSTREAM_DEVICE", "cuda")
 DEFAULT_MAX_FULL_POINTS = os.getenv("HORIZONSTREAM_DEMO_MAX_FULL_POINTS", "null")
 DEFAULT_LOOP_PRESET = "kitti"
+DEFAULT_SLIDING_SIZE_ENV = os.getenv("HORIZONSTREAM_DEMO_SLIDING_SIZE", "").strip()
 SESSION_ROOT = os.getenv(
     "HORIZONSTREAM_GRADIO_SESSION_ROOT",
     os.path.join(tempfile.gettempdir(), "horizonstream_gradio_sessions"),
@@ -70,6 +71,33 @@ def _load_config(config_path: str) -> dict:
     cfg.setdefault("inference", {})
     cfg.setdefault("output", {})
     return cfg
+
+
+def _default_sliding_size() -> int:
+    """Streaming chunk size, the one knob that decides whether the demo fits in VRAM.
+
+    Peak memory scales with this, not with sequence length, so a high-resolution
+    upload can exhaust a GPU that handles the packaged demo videos fine. The
+    config stays the source of truth; the env var overrides it for a machine.
+    """
+    if DEFAULT_SLIDING_SIZE_ENV:
+        try:
+            value = int(DEFAULT_SLIDING_SIZE_ENV)
+        except ValueError:
+            print(
+                f"[demo] ignoring non-integer HORIZONSTREAM_DEMO_SLIDING_SIZE="
+                f"{DEFAULT_SLIDING_SIZE_ENV!r}",
+                flush=True,
+            )
+        else:
+            if value > 0:
+                return value
+            print(
+                f"[demo] ignoring non-positive HORIZONSTREAM_DEMO_SLIDING_SIZE={value}",
+                flush=True,
+            )
+    cfg = _load_config(default_config_path())
+    return int(cfg.get("inference", {}).get("sliding_size", 21) or 21)
 
 
 def _demo_loop_defaults() -> dict:
@@ -183,6 +211,7 @@ def _run_video(
     fps: Optional[float],
     video_stride: int,
     max_frames: Optional[int],
+    sliding_size: Optional[int],
     run_loop_closure: bool,
     salad_score_thresh: float,
     retrieval_top_k: int,
@@ -237,6 +266,8 @@ def _run_video(
         cfg["data"]["max_frames"] = int(max_frames)
     else:
         cfg["data"]["max_frames"] = None
+    if sliding_size is not None and int(sliding_size) > 0:
+        cfg["inference"]["sliding_size"] = int(sliding_size)
     cfg["inference"]["offload_outputs_to_cpu"] = False
     cfg["output"]["root"] = output_root
     cfg["output"]["save_points"] = True
@@ -346,6 +377,7 @@ def _run_video(
 
 
 def main() -> None:
+    default_sliding_size = _default_sliding_size()
     loop_defaults = _demo_loop_defaults()
     default_salad_score_thresh = float(loop_defaults.get("salad_score_thresh", 0.85))
     default_retrieval_top_k = int(loop_defaults.get("retrieval_top_k", 3))
@@ -368,6 +400,15 @@ def main() -> None:
                 fps = gr.Number(label="Target FPS (0 = source/stride)", value=0)
                 video_stride = gr.Slider(label="Video Stride", minimum=1, maximum=30, step=1, value=1)
                 max_frames = gr.Number(label="Max Frames (0 = all)", value=0)
+                sliding_size = gr.Slider(
+                    label="Sliding Size",
+                    minimum=1,
+                    maximum=21,
+                    step=1,
+                    value=default_sliding_size,
+                    info="Frames per streaming chunk. Peak VRAM scales with this and "
+                    "not with sequence length, so lower it if inference runs out of memory.",
+                )
 
         with gr.Accordion("Loop Closure", open=False):
             run_loop_closure = gr.Checkbox(label="Run Loop Closure", value=True)
@@ -414,6 +455,7 @@ def main() -> None:
                 fps,
                 video_stride,
                 max_frames,
+                sliding_size,
                 run_loop_closure,
                 salad_score_thresh,
                 retrieval_top_k,

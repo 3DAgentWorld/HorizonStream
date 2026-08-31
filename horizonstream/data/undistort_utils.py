@@ -6,7 +6,11 @@ import torch
 
 try:
     import pycolmap
-except ImportError:
+except Exception:
+    # pycolmap swallows the ImportError from its C++ backend and re-raises a
+    # RuntimeError, which an ImportError guard lets through. Undistortion is
+    # optional (camera_preprocess), so degrade to the cv2 path instead of
+    # taking the whole package down with it.
     pycolmap = None
 import torch.nn.functional as F
 

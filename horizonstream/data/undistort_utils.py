@@ -9,19 +9,10 @@ import torch.nn.functional as F
 
 @lru_cache(maxsize=1)
 def _load_pycolmap():
-    """Import pycolmap on first actual use.
-
-    Undistortion only runs when camera_preprocess is enabled, but importing
-    pycolmap at module scope drags its whole C++ stack into every process that
-    merely touches the dataloader. That stack carries its own glog build, which
-    aborts the process at import time if another glog is already loaded (conda's
-    libarrow pulls one in), and pycolmap re-raises a RuntimeError rather than an
-    ImportError when its backend cannot load. Deferring the import keeps both
-    failures confined to the code path that actually needs it.
-    """
+    """Load pycolmap when camera undistortion is requested."""
     try:
         import pycolmap
-    except Exception as exc:  # RuntimeError from a broken C++ backend, too.
+    except Exception as exc:
         raise ImportError(f"pycolmap is unavailable: {exc}") from exc
     return pycolmap
 

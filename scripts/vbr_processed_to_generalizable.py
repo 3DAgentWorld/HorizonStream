@@ -39,7 +39,7 @@ def _link_or_copy(src: str, dst: str, copy: bool) -> None:
 
 def _opencv_matrix(name: str, mat: np.ndarray) -> str:
     mat = np.asarray(mat, dtype=np.float64)
-    data = ", ".join(f"{x:.17g}" for x in mat.reshape(-1))
+    data = ", ".join(f"{x:.17e}" for x in mat.reshape(-1))
     return (
         f"{name}: !!opencv-matrix\n"
         f"   rows: {mat.shape[0]}\n"

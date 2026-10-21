@@ -255,45 +255,6 @@ class BatchCameraHead(CameraHead):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    # def forward(self, win_pose_tokens: torch.Tensor, chunk_idx: int, num_iterations: int = 4) -> list:
-    #     def create_head_mask(Win: int, device: torch.device, dtype: torch.dtype = torch.float32,) -> torch.Tensor:
-    #         row_head_num = Win * (Win - 1) // 2
-    #         neg = torch.finfo(dtype).min
-    #         mask_head = torch.full((row_head_num, Win, Win), neg, dtype=dtype, device=device)
-    #         j_vals = torch.arange(1, Win, device=device, dtype=torch.long)
-    #         row_j = j_vals.repeat_interleave(j_vals)[:, None]  # (row_head_num, 1)
-
-    #         q = torch.arange(Win, device=device, dtype=torch.long)[None, :]  # (1, Win)
-    #         valid_q = (q < row_j)  # (row_head_num, Win)
-    #         valid = valid_q[:, :, None] & valid_q[:, None, :]
-            
-    #         mask_head.masked_fill_(valid, 0.0)
-    #         mask_head[..., 0].masked_fill_(~valid_q, 0.0)
-    #         return mask_head.unsqueeze(1) # explicit head dim
-        
-    #     B, row_num, Win, C = win_pose_tokens.shape
-        
-    #     win_pose_tokens = self.token_norm(win_pose_tokens)
-    #     row_head_num = Win * (Win - 1) // 2
-            
-    #     if chunk_idx != 0:
-    #         win_pose_tokens = win_pose_tokens.reshape(B * row_num, Win, C)
-    #         pred_pose_enc_list = self.trunk_fn(win_pose_tokens, num_iterations, attn_mask=None)
-    #     else:
-    #         head_pose_tokens = win_pose_tokens[:, :row_head_num].flatten(0, 1) # (B * row_head_num, Win, C)
-    #         head_attn_mask = create_head_mask(Win, win_pose_tokens.device, win_pose_tokens.dtype)
-    #         head_attn_mask = head_attn_mask.unsqueeze(0).expand(B, -1, -1, -1, -1).flatten(0, 1) # (B * row_head_num, 1, Win, Win)
-    #         head_enc_list = self.trunk_fn(head_pose_tokens, num_iterations, attn_mask=head_attn_mask)
-    #         tail_pose_tokens = win_pose_tokens[:, row_head_num:].flatten(0, 1)
-    #         tail_enc_list = self.trunk_fn(tail_pose_tokens, num_iterations, attn_mask=None)
-            
-    #         pred_pose_enc_list = []
-    #         for i in range(num_iterations):
-    #             h = head_enc_list[i].view(B, -1, Win, self.target_dim)
-    #             t = tail_enc_list[i].view(B, -1, Win, self.target_dim)
-    #             pred_pose_enc_list.append(torch.cat([h, t], dim=1).flatten(0, 1))  # (B*row_num, Win, self.target_dim)
-    #     return pred_pose_enc_list
-    
     def forward(self, win_pose_tokens: torch.Tensor, chunk_idx: int, num_iterations: int = 4) -> list:        
         _, Fr, Win, _ = win_pose_tokens.shape
         

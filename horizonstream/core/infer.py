@@ -175,8 +175,7 @@ def _prepare_mask_for_model(mask, size, crop, patch_size, target_shape, square_o
         halfw = ((2 * cx) // patch_size) * (patch_size // 2)
         halfh = ((2 * cy) // patch_size) * (patch_size // 2)
         if not square_ok and w == h:
-            # Must match the identical snapping in load_images_for_eval, or the
-            # mask covers a different crop than the image it masks.
+            # Use the image loader's patch-aligned crop.
             half_step = max(patch_size // 2, 1)
             halfh = max((int(3 * halfw / 4) // half_step) * half_step, half_step)
         target_w = 2 * halfw

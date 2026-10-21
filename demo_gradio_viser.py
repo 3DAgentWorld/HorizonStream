@@ -74,12 +74,7 @@ def _load_config(config_path: str) -> dict:
 
 
 def _default_sliding_size() -> int:
-    """Streaming chunk size, the one knob that decides whether the demo fits in VRAM.
-
-    Peak memory scales with this, not with sequence length, so a high-resolution
-    upload can exhaust a GPU that handles the packaged demo videos fine. The
-    config stays the source of truth; the env var overrides it for a machine.
-    """
+    """Read the streaming chunk size from the environment or inference config."""
     if DEFAULT_SLIDING_SIZE_ENV:
         try:
             value = int(DEFAULT_SLIDING_SIZE_ENV)
@@ -403,11 +398,10 @@ def main() -> None:
                 sliding_size = gr.Slider(
                     label="Sliding Size",
                     minimum=1,
-                    maximum=21,
+                    maximum=max(21, default_sliding_size),
                     step=1,
                     value=default_sliding_size,
-                    info="Frames per streaming chunk. Peak VRAM scales with this and "
-                    "not with sequence length, so lower it if inference runs out of memory.",
+                    info="Frames per streaming chunk. Lower this value to reduce peak GPU memory.",
                 )
 
         with gr.Accordion("Loop Closure", open=False):

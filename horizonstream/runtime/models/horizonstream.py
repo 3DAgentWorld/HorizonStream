@@ -616,8 +616,6 @@ class HorizonStreamAggregator(Aggregator):
             else:
                 local_kv_cache.kv_ori = torch.cat([kv_cache.kv_ori, local_kv_cache.kv_new], dim=2) # (2, B, Win - 1 + F, H, P, C//H)
             
-            # if local_kv_cache.kv_ori.shape[2] > self.max_detach_length:
-            #     local_kv_cache.kv_ori = detach_kv_cache(local_kv_cache.kv_ori, dim=2, keep_tail_length=self.max_detach_length)
             # Update global kv cache
             if kv_cache.kv_new is None: # avoid reloading in checkpoint
                 kv_cache.kv_new = local_kv_cache.kv_ori[:, :, 1-Win:].detach() # (2, B, Win-1, H, P, C//H)
@@ -629,10 +627,6 @@ class HorizonStreamAggregator(Aggregator):
                 s0, s1, s2, s3, s4, s5 = local_kv_cache.kv_ori.stride()
                 kv_cache_win = local_kv_cache.kv_ori.as_strided(size=(2, B, F, Win, *kv_remain_shape), stride=(s0, s1, s2, s2, s3, s4, s5)) # (2,B,F,Win,H,P,C//H)
                 local_kv_cache.kv_ori = kv_cache_win.flatten(1, 3) # (2, B*F*Win, H, P, C//H)
-                # kv_cache_select = local_kv_cache.kv_ori.index_select(dim=2, index=unfold_idx) # (2, B, F*Win, H, P, C//H)
-                # local_kv_cache.kv_ori = kv_cache_select.flatten(1, 2) # (2, B*F*Win, H, P, C//H)
-                # local_kv_cache.kv_ori = local_kv_cache.kv_ori.unfold(dimension=2, size=Win, step=1) # (2, B, F, H, P, C//H, Win)
-                # local_kv_cache.kv_ori = local_kv_cache.kv_ori.permute(0, 1, 2, 6, 3, 4, 5).flatten(1, 3) # (2, B*F*Win, H, P, C//H)
                 
             # Avoid updating local.kv_new in attention
             local_kv_cache.kv_new = torch.tensor([], device=local_kv_cache.kv_ori.device)
@@ -712,15 +706,11 @@ class HorizonStreamAggregator(Aggregator):
                 
                 new_kv_cache = KVCache()
                 new_kv_cache.kv_ori = torch.cat([kv_cache.kv_ori, kv_patch], dim=3) # (2, B, H, Win - 1 + F, P, C//H)
-                # if new_kv_cache.kv_ori.shape[3] > self.max_detach_length:
-                #     new_kv_cache.kv_ori = detach_kv_cache(new_kv_cache.kv_ori, dim=3, keep_tail_length=self.max_detach_length)
                 if kv_cache.kv_new is None: # avoid overwriting in checkpoint
                     kv_cache.kv_new = new_kv_cache.kv_ori[..., (1 - Win):, :, :].detach() # (2, B, H, Win - 1, P, C//H)
                 kv_cache_select = new_kv_cache.kv_ori.index_select(dim=3, index=unfold_idx) # (2, B, H, F*Win, P, C//H)
                 kv_cache_select = kv_cache_select.view(2, B, H, F, Win, P, D).transpose(2, 3) # (2, B, F, H, Win, P, C//H)
                 new_kv_cache.kv_ori = kv_cache_select.reshape(2, B * F, H, Win * P, D)
-                # new_kv_cache.kv_ori = new_kv_cache.kv_ori.unfold(dimension=3, size=Win, step=1) # (2, B, H, F, P, C//H, Win)
-                # new_kv_cache.kv_ori = new_kv_cache.kv_ori.permute(0, 1, 3, 2, 6, 4, 5).reshape(2, B * F, H, Win * P, D)
                 new_kv_cache.kv_ori = torch.cat([new_kv_cache.kv_ori, kv_pose], dim=3) # (2, B * F, H, Win * P + Win * X, C//H)
                 
                 all_tokens = global_block(all_tokens, all_pos, kv_cache=new_kv_cache, q_cache=q_cache) # (B * F, A, C)

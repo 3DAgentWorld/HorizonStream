@@ -73,7 +73,7 @@ def save_video(output_path, pattern, fps=30):
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         pass
 
-    # Fallback: filter out broken PNG frames, rebuild a clean contiguous sequence, and retry.
+    # Retry with a contiguous sequence of readable PNG frames.
     frame_paths = sorted(glob(pattern))
     valid_paths = []
     bad_count = 0

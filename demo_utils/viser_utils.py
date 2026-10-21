@@ -187,9 +187,7 @@ def viser_wrapper(
     current_subsample = [subsample]  # Use list to allow modification in nested functions
 
     # Main camera (cam0)
-    # Pi3 outputs images as (S,H,W,3) or (S,C,H,W) depending on processing.
-    # Viser expects (H,W,3) for image previews. Let's standardize.
-    # The permute in demo_viser_pi3.py results in (S, H, W, 3)
+    # Convert images to (S,H,W,3) for Viser previews.
     cam0_images = pred_dict["images"]
     if cam0_images.shape[-1] != 3: # If not (S,H,W,3), assume (S,C,H,W)
          cam0_images = cam0_images.transpose(0, 2, 3, 1)
@@ -304,13 +302,12 @@ def viser_wrapper(
         if conf_array.size == 0 or not np.any(np.isfinite(conf_array)):
             return conf_array > -np.inf
         
-        # In Pi3, conf is already a probability in [0,1]. Percentile is not the right tool.
-        # We should use the percentage as a direct threshold.
+        # Interpret the percentage slider as a confidence threshold.
         thresh = percent / 100.0
         return (conf_array >= thresh) & (conf_array > 1e-5)
 
     # ───────────── Create All Frame Nodes ─────────────
-    # 不再进行中心化处理，直接使用原始坐标
+    # Store points in the selected display coordinate frame.
     xyz_centered_data = {}
 
     # First, collect all camera poses to find the canonical transform
@@ -334,7 +331,7 @@ def viser_wrapper(
         frustums[cam_id] = []
         frames_roots[cam_id] = []
 
-        # Pi3 provides camera_poses directly, assuming they are camera-to-world 4x4 matrices
+        # Camera poses use the camera-to-world convention.
         if cam_id == "cam0":
             poses = pred_dict.get("camera_poses")
         else:
@@ -442,11 +439,9 @@ def viser_wrapper(
             norm_i = i/(S-1) if S>1 else 0.0
             col   = cm.get_cmap('gist_rainbow')(norm_i)[:3]
             
-            # Since Pi3 doesn't provide intrinsics, we have to use a heuristic for FOV.
-            # This is a limitation. A fixed FOV is a reasonable fallback.
+            # Draw the camera frustum with a 60-degree field of view.
             h_img_cam, w_img_cam = img_data[cam_id].shape[-3:-1]
-            # Use a more reasonable FOV - around 60 degrees (1.047 radians)
-            fov_cam = 1.047  # 60 degrees in radians, typical camera FOV
+            fov_cam = 1.047  # 60 degrees in radians
             aspect_cam = w_img_cam / h_img_cam
 
             # Reconstruct 4x4 matrix from 3x4 for SE3

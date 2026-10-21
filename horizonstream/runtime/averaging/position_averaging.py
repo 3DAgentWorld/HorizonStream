@@ -211,7 +211,7 @@ def l1_lad_admm_cholmod_no_reg(
     At = A.T
     AtA = (At @ A).tocsc()
 
-    # old sksparse.cholmod style:
+    # Factor the sparse normal matrix.
     F = _build_sparse_solver(AtA)
 
     def shrink(x, kappa):

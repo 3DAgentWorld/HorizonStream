@@ -1,0 +1,97 @@
+io:
+  input_path: ""
+  output_path: render.mp4
+  fps: 30
+  keep_frame_images: false
+  skip_first_frames: 0
+  max_frames: 0
+  frame_step: 1
+
+render:
+  width: 1920
+  height: 1080
+  background: white
+  point_size: 2.0
+  near_plane: 0.1
+  far_plane: 200.0
+  lod_target_pixels: 1.5
+  brightness: 1.4
+  saturation: 1.2
+
+camera:
+  fov_degrees: 60.0
+  transition_frames: 40
+  segments:
+    - mode: follow
+      frames: [0, -1]
+      back_distance: 0.25
+      height_offset: 0.05
+      look_ahead: 0.5
+      smoothing_window: 20
+      scale_reference_frames: 100
+    - mode: overview
+      frames: [-1, -1]
+      duration_frames: 90
+      overview_height_scale: 1.6
+
+geometry:
+  lod_levels: 16
+  min_depth: 0.5
+  max_depth: 80.0
+  pixel_step: 2
+  jitter_pixels: true
+
+filters:
+  sky_mask_enabled: true
+  sky_mask_model: checkpoints/skyseg.onnx
+  sky_mask_batch_size: 64
+  sky_mask_preview_dir: ./sky_mask_viz
+  confidence_percentile: 0.0
+  visibility_threshold: 1.3
+  color_filter_enabled: true
+  white_threshold: 240
+  bright_channel_threshold: 200
+  blue_channel_min: 155
+  red_channel_max: 195
+  green_channel_min: 100
+  red_green_delta_max: 95
+  blue_green_delta_min: 8
+  blue_red_delta_min: 15
+  statistical_filter_enabled: false
+  statistical_neighbors: 16
+  statistical_std_ratio: 2.5
+  radius_filter_enabled: true
+  radius_filter_radius: 0.20
+  radius_filter_min_neighbors: 15
+
+overlays:
+  camera_path_style: frustum
+  trail_enabled: true
+  trail_length: 80
+  trail_width: 2.0
+  trail_color: rainbow
+  frustum_count: 20000
+  frustum_scale: 0.05
+  frustum_line_width: 1.5
+  frame_label_enabled: false
+  frame_label_position: top_left
+
+minimap:
+  enabled: true
+  width: 512
+  height: 512
+  background: white
+  trail_width: 4
+  marker_radius: 10
+  margin: 0.20
+  rotation_degrees: 90
+  trail_saturation: 0.95
+  trail_brightness: 0.85
+
+export:
+  glb_enabled: true
+  glb_sample_rate: 10
+
+runtime:
+  batch_size: 4
+  memory_limit_gb: 30.0

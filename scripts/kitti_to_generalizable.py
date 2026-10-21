@@ -47,7 +47,7 @@ def _link_tree(src_dir: str, dst_dir: str, copy: bool):
 def _opencv_matrix(name: str, mat: np.ndarray) -> str:
     mat = np.asarray(mat, dtype=np.float64)
     rows, cols = mat.shape
-    data = ", ".join(f"{float(v):.12g}" for v in mat.reshape(-1))
+    data = ", ".join(f"{float(v):.12e}" for v in mat.reshape(-1))
     return (
         f"{name}: !!opencv-matrix\n"
         f"   rows: {rows}\n"

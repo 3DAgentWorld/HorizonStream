@@ -202,8 +202,7 @@ class DinoVisionTransformer(nn.Module):
         assert N == M * M
         kwargs = {}
         if self.interpolate_offset:
-            # Historical kludge: add a small number to avoid floating point error in the interpolation, see https://github.com/facebookresearch/dino/issues/8
-            # Note: still needed for backward-compatibility, the underlying operators are using both output size and scale factors
+            # Apply the configured offset when interpolating positional embeddings.
             sx = float(w0 + self.interpolate_offset) / M
             sy = float(h0 + self.interpolate_offset) / M
             kwargs["scale_factor"] = (sx, sy)

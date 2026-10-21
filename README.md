@@ -1,5 +1,7 @@
 # HorizonStream: Long-Horizon Attention for Streaming 3D Reconstruction
 
+**NeurIPS 2026**
+
 <p align="center">
   <a href="https://arxiv.org/abs/2605.23889"><img src="https://img.shields.io/badge/arXiv-2605.23889-b31b1b?style=flat-square&logo=arxiv&logoColor=white" alt="arXiv"></a>
   &nbsp;
@@ -22,7 +24,7 @@
 - **Stable across diverse scenes**: Urban driving, large-scale outdoor, indoor, game, and industrial videos.
 - **Optional loop closure**: An optional lightweight loop-closure module further improves global trajectory consistency.
 
-## ToDoList
+## Release Status
 
 - [x] Weights release
 - [x] Optional loop closure
@@ -32,9 +34,10 @@
 - [x] Interactive Viser demo
 - [x] Gradio demo
 - [x] Depth-fusion post-processing utility
-- [ ] Data processing scripts
-- [ ] Render script
-- [ ] Training code release
+- [x] Inference and evaluation data conversion scripts
+- [x] Rendering scripts
+
+Training code is not being released at this time due to company policy restrictions.
 
 ## Installation
 
@@ -86,7 +89,7 @@ python infer.py \
   --output-root outputs_horizonstream/meta_root
 ```
 
-`infer.py` runs loop closure by default after inference. Add `--no-loop` to disable it. If loop weights are missing and cannot be downloaded, loop closure is skipped and the main inference output is kept.
+`infer.py` runs loop closure by default after inference. Add `--no-loop` to disable it. Loop closure requires the released loop weights.
 
 Add `--fps 10` to sample a target video frame rate. Add `--offload-outputs-to-cpu` for long videos to reduce persistent VRAM use.
 
@@ -170,6 +173,8 @@ Dataset sources:
 
 Conversion helpers:
 
+For Waymo, `--src` should point to a `generalizable` meta-root.
+
 ```bash
 python scripts/kitti_to_generalizable.py --src /path/to/kitti_odometry_root --out /path/to/meta_root
 python scripts/waymo_to_generalizable.py --src /path/to/waymo_meta_root --out /path/to/meta_root
@@ -214,7 +219,7 @@ python run_pipeline.py \
   --output-root outputs_horizonstream/run
 ```
 
-The reported paper inference uses `--sliding-size 21`. To reduce GPU memory, use a smaller sliding size. The minimum `--sliding-size 1` runs fully streaming inference and needs about 8.5 GB peak GPU memory. For long sequences, use `--offload-outputs-to-cpu` to prevent accumulated outputs from causing OOM.
+The reported paper inference uses `--sliding-size 21`. To reduce GPU memory, use a smaller sliding size. The minimum `--sliding-size 1` runs fully streaming inference and needs about 8.5 GB peak GPU memory. For long sequences, use `--offload-outputs-to-cpu` to store accumulated outputs in CPU memory.
 
 For KITTI, disabling camera undistortion is more accurate in our evaluation: --no-camera-preprocess.
 
@@ -230,7 +235,7 @@ Add `--seq-list <scene_name>` and `--camera <camera_id>` only when selecting a s
 | `--fps 10` | sample a target frame rate from video input |
 | `--seq-list <scene_name>`, `--camera <camera_id>` | select a specific scene/camera from multi-scene or multi-camera data |
 | `--sliding-size 21` | streaming chunk size used for reported paper inference results |
-| `--offload-outputs-to-cpu` | offload accumulated outputs to CPU for long sequences to avoid OOM |
+| `--offload-outputs-to-cpu` | store accumulated outputs in CPU memory for long sequences |
 | `--camera-preprocess`, `--no-camera-preprocess` | enable or disable camera undistortion/preprocessing |
 | `--gt-img-path`, `--gt-seq-list`, `--gt-camera` | use a separate ground-truth meta-root for evaluation |
 | `--max-frames` | run a short subset for debugging |
@@ -264,8 +269,6 @@ The default parameters work well for most scenes. Some scenes may need parameter
 - If loops are detected but the trajectory does not close enough, increase `--pose-graph-loop-weight`.
 - Use `--temporal-exclusion` and `--min-frame-separation` to suppress nearby frames as loop candidates.
 - Use `--loop-edge-score-threshold` to filter weak accepted loop edges when needed.
-
-If loop assets are unavailable, loop closure is skipped instead of failing inference.
 
 ### Evaluation
 
@@ -329,6 +332,20 @@ python demo_viser_only.py \
   --port 8080
 ```
 
+## Rendering
+
+Render a saved sequence containing `images/rgb/`, `depth/dpt/`, and `poses/`:
+
+```bash
+pip install -r render_scripts/requirements.txt
+python render_scripts/render_scene.py \
+  --input outputs_horizonstream/run/your_sequence_name \
+  --output renders/your_sequence_name.mp4
+```
+
+This writes a reconstruction video, a minimap video, and a GLB point cloud.
+Use `--config` with [render_config.yaml](render_scripts/configs/render_config.yaml) to adjust rendering settings. Add `--max_frames 30` for a short preview or `--disable_sky_mask` to render without `checkpoints/skyseg.onnx`.
+
 ## Citation
 
 If you find this release useful, please cite HorizonStream. Our related work LongStream is also relevant for long-sequence streaming visual geometry and can be cited together when appropriate.
@@ -352,3 +369,7 @@ If you find this release useful, please cite HorizonStream. Our related work Lon
 ## Acknowledgements
 
 We thank the authors and open-source projects of VGGT, Stream3R, StreamVGGT, DUSt3R, VGGT-Long and related streaming 3D reconstruction work for releasing code and ideas that informed this inference package.
+
+## License
+
+HorizonStream is licensed under [CC BY-NC-SA 4.0](LICENSE).

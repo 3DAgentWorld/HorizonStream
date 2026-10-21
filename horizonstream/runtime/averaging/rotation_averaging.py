@@ -219,7 +219,6 @@ def compute_residual_rotations(abs_rotations: torch.Tensor, rel_rotations: torch
     res_axis_angles = rotation_matrix_to_axis_angle(res_rotations) # (Sli,Win-1,3)
     fix_res_axis_angles = rotation_matrix_to_axis_angle(abs_rotations[fix_index].mT) # (3)
     res_axis_angles = torch.cat([fix_res_axis_angles, res_axis_angles.reshape(-1)], dim=0) # (3+Sli*(Win-1)*3)
-    # print(res_axis_angles.reshape(-1, 3).norm(dim=-1))
     return res_axis_angles
 
 def solve_delta_axis_angles_l1(A: sparse.csc_array, res_axis_angles: torch.Tensor) -> torch.Tensor:
@@ -277,17 +276,7 @@ def rotation_averaging(
     rel_rotations = valid_relative_rotations[:, :(Win-1)] # (Sli,Win-1,3,3)
     abs_rotations = online_absolute_rotations @ online_absolute_rotations[fix_index].mT # (F,3,3)
 
-    # L1 Solve
-    # for _ in range(5):
-    #     res_axis_angles = compute_residual_rotations(abs_rotations, rel_rotations, Win) # (3+Sli*(Win-1)*3)
-    #     delta_axis_angles = solve_delta_axis_angles_l1(A, res_axis_angles)
-    #     average_delta_angles = delta_axis_angles.norm(dim=-1).mean(dim=0)
-    #     delta_rotations = axis_angle_to_rotation_matrix(delta_axis_angles) # (F, 3, 3)
-    #     abs_rotations = abs_rotations @ delta_rotations
-    #     if average_delta_angles < 1e-4: break
-    #     else: print(f"l1 iter: {_}, average delta angles: {average_delta_angles}")
-
-    # # irls Solve
+    # Iteratively reweighted least squares.
     AT = A.T.tocsc()
     for _ in range(max_iters):
         res_axis_angles = compute_residual_rotations(abs_rotations, rel_rotations, Win, fix_index) # (3+Sli*(Win-1)*3)

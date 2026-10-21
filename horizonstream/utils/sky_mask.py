@@ -28,64 +28,47 @@ SKYSEG_TRT_ENGINE_CACHE_DIR = os.environ.get(
 
 
 def _preload_tensorrt_libs() -> bool:
-    """Make pip-installed TensorRT visible to onnxruntime.
-
-    ``pip install tensorrt`` drops the shared objects into
-    ``site-packages/tensorrt_libs/``, which is not on the dynamic loader path,
-    so onnxruntime fails to dlopen its TensorRT provider unless the caller sets
-    LD_LIBRARY_PATH. Loading them here with RTLD_GLOBAL registers them under
-    their sonames, which is enough for that dlopen to resolve.
-    """
+    """Load TensorRT shared libraries for ONNX Runtime."""
     try:
         import tensorrt_libs
     except Exception:
         try:
-            import tensorrt  # noqa: F401  (system install; already on the path)
+            import tensorrt  # noqa: F401
         except Exception:
             return False
         return True
 
-    lib_dir = os.path.dirname(os.path.abspath(tensorrt_libs.__file__))
+    module_file = getattr(tensorrt_libs, "__file__", None)
+    lib_dirs = (
+        [os.path.dirname(os.path.abspath(module_file))]
+        if module_file
+        else list(getattr(tensorrt_libs, "__path__", []))
+    )
     loaded = False
-    for pattern in ("libnvinfer.so.*", "libnvonnxparser.so.*"):
-        for path in sorted(glob.glob(os.path.join(lib_dir, pattern))):
-            try:
-                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
-                loaded = True
-            except OSError:
-                pass
+    for lib_dir in lib_dirs:
+        for pattern in ("libnvinfer.so.*", "libnvonnxparser.so.*"):
+            for path in sorted(glob.glob(os.path.join(lib_dir, pattern))):
+                try:
+                    ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+                    loaded = True
+                except OSError:
+                    pass
     return loaded
 
 
 def _build_skyseg_session(model_path: str):
-    """Build an onnxruntime session, preferring TensorRT > CUDA > CPU.
-
-    onnxruntime silently falls back to CPU-only when ``providers`` is omitted,
-    which makes sky segmentation the slowest stage of a long sequence
-    (~92 ms/frame on CPU vs ~6.7 ms on CUDA and ~2.3 ms on TensorRT).
-    Each provider is attempted in turn so that a missing or mismatched GPU
-    runtime degrades instead of breaking inference.
-    """
+    """Build a session with TensorRT, CUDA, or CPU, in that order."""
     available = set(onnxruntime.get_available_providers())
     attempts = []
 
     if "TensorrtExecutionProvider" in available and _preload_tensorrt_libs():
-        # Parsing skyseg.onnx emits ~150 harmless "Empty initializer ... was
-        # provided with non-empty data" warnings on every run, cached engine or
-        # not. They come from the global logger, so SessionOptions cannot mute
-        # them. Drop to ERROR so real failures still surface.
-        try:
-            onnxruntime.set_default_logger_severity(3)
-        except Exception:
-            pass
         cache_dir = os.path.abspath(os.path.expanduser(SKYSEG_TRT_ENGINE_CACHE_DIR))
         try:
             os.makedirs(cache_dir, exist_ok=True)
         except OSError:
             cache_dir = None
         if cache_dir is not None:
-            # Engine compilation costs ~15 s on first use; caching it makes
-            # every later run start in well under a second.
+            # Reuse compiled TensorRT engines across sessions.
             attempts.append((
                 ["TensorrtExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"],
                 [

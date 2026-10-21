@@ -285,7 +285,7 @@ def _invert_w2c_pose_robust(t_w2c: np.ndarray) -> np.ndarray:
     if not np.isfinite(r).all() or not np.isfinite(trans).all():
         raise ValueError("pose contains non-finite values")
 
-    # Project to the closest proper rotation to avoid instability on slightly non-rigid matrices.
+    # Project the pose rotation onto SO(3).
     u, _, vt_mat = np.linalg.svd(r, full_matrices=False)
     r_ortho = u @ vt_mat
     if np.linalg.det(r_ortho) < 0.0:
@@ -830,7 +830,7 @@ def _camera_frustum_visible_mask(
             keep &= (u >= 0.0) & (u < width) & (v >= 0.0) & (v < height)
             return keep
 
-    # Fallback with a generic frustum when intrinsics are unavailable.
+    # Draw a generic frustum when intrinsics are unavailable.
     fov = float(np.clip(1.047 * fov_scale, 0.05, 3.1))
     aspect = 1.0
     x = points_cam[:, 0]
@@ -2084,7 +2084,7 @@ def _visualize_sequence_dir(
             if bool(gui_scene_transparent.value):
                 alpha = rgba[:, :, 3]
                 if int(alpha.min()) == 255:
-                    # Fallback: key out a uniform background color when PNG alpha is unavailable.
+                    # Key out the uniform background when PNG alpha is unavailable.
                     rgb = rgba[:, :, :3].astype(np.int16)
                     corners = np.array(
                         [
@@ -2969,7 +2969,7 @@ def main() -> None:
     parser.add_argument("--auto_load_cloud", action="store_true", help="Automatically load/rebuild the point cloud on startup.")
     args = parser.parse_args()
 
-    # Backward-compatible UX: allow passing a sequence directory through --predictions.
+    # Accept a sequence directory through --predictions.
     if args.sequence_dir is None and args.predictions and os.path.isdir(args.predictions):
         args.sequence_dir = args.predictions
         args.predictions = None

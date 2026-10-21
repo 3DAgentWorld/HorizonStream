@@ -36,7 +36,7 @@ def apply_ema(data: np.ndarray, alpha: float) -> np.ndarray:
 
 def setup_camera_follow(
     server: viser.ViserServer,
-    slider: viser.GuiSliderHandle,
+    slider: viser.GuiInputHandle,
     target_positions: np.ndarray,
     camera_positions: Optional[np.ndarray] = None,
     camera_wxyz: Optional[np.ndarray] = None,

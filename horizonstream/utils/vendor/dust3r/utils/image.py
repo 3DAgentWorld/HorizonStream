@@ -148,7 +148,12 @@ def load_images(
                 (2 * cy) // patch_size
             ) * patch_size // 2
             if not (square_ok) and W == H:
-                halfh = 3 * halfw / 4
+                # 3/4 of halfw is not necessarily a multiple of patch_size // 2,
+                # so square inputs produced a crop the patch embedding rejects
+                # (patch_size=14, size=518 -> height 388). Upstream only ever hit
+                # multiples because it used patch_size=16. Snap down to the grid.
+                half_step = max(patch_size // 2, 1)
+                halfh = max((int(3 * halfw / 4) // half_step) * half_step, half_step)
             img = img.crop((cx - halfw, cy - halfh, cx + halfw, cy + halfh))
 
         W2, H2 = img.size
@@ -218,7 +223,12 @@ def load_images_for_eval(
                 (2 * cy) // patch_size
             ) * (patch_size // 2)
             if not (square_ok) and W == H:
-                halfh = 3 * halfw / 4
+                # 3/4 of halfw is not necessarily a multiple of patch_size // 2,
+                # so square inputs produced a crop the patch embedding rejects
+                # (patch_size=14, size=518 -> height 388). Upstream only ever hit
+                # multiples because it used patch_size=16. Snap down to the grid.
+                half_step = max(patch_size // 2, 1)
+                halfh = max((int(3 * halfw / 4) // half_step) * half_step, half_step)
             if crop:
                 img = img.crop((cx - halfw, cy - halfh, cx + halfw, cy + halfh))
             else:

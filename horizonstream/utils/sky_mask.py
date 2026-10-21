@@ -1,5 +1,7 @@
 import os
 import copy
+import ctypes
+import glob
 import cv2
 import numpy as np
 import urllib.error
@@ -19,6 +21,105 @@ SKYSEG_REMOTE_URL = os.environ.get(
     "https://huggingface.co/NicolasCC/HorizonStream/resolve/main/skyseg.onnx",
 ).strip()
 SKYSEG_DOWNLOAD_TIMEOUT_SEC = int(os.environ.get("LONGSTREAM_SKYSEG_DOWNLOAD_TIMEOUT_SEC", "120"))
+SKYSEG_TRT_ENGINE_CACHE_DIR = os.environ.get(
+    "LONGSTREAM_SKYSEG_TRT_CACHE_DIR",
+    os.path.join("checkpoints", "trt_cache"),
+).strip()
+
+
+def _preload_tensorrt_libs() -> bool:
+    """Make pip-installed TensorRT visible to onnxruntime.
+
+    ``pip install tensorrt`` drops the shared objects into
+    ``site-packages/tensorrt_libs/``, which is not on the dynamic loader path,
+    so onnxruntime fails to dlopen its TensorRT provider unless the caller sets
+    LD_LIBRARY_PATH. Loading them here with RTLD_GLOBAL registers them under
+    their sonames, which is enough for that dlopen to resolve.
+    """
+    try:
+        import tensorrt_libs
+    except Exception:
+        try:
+            import tensorrt  # noqa: F401  (system install; already on the path)
+        except Exception:
+            return False
+        return True
+
+    lib_dir = os.path.dirname(os.path.abspath(tensorrt_libs.__file__))
+    loaded = False
+    for pattern in ("libnvinfer.so.*", "libnvonnxparser.so.*"):
+        for path in sorted(glob.glob(os.path.join(lib_dir, pattern))):
+            try:
+                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+                loaded = True
+            except OSError:
+                pass
+    return loaded
+
+
+def _build_skyseg_session(model_path: str):
+    """Build an onnxruntime session, preferring TensorRT > CUDA > CPU.
+
+    onnxruntime silently falls back to CPU-only when ``providers`` is omitted,
+    which makes sky segmentation the slowest stage of a long sequence
+    (~92 ms/frame on CPU vs ~6.7 ms on CUDA and ~2.3 ms on TensorRT).
+    Each provider is attempted in turn so that a missing or mismatched GPU
+    runtime degrades instead of breaking inference.
+    """
+    available = set(onnxruntime.get_available_providers())
+    attempts = []
+
+    if "TensorrtExecutionProvider" in available and _preload_tensorrt_libs():
+        # Parsing skyseg.onnx emits ~150 harmless "Empty initializer ... was
+        # provided with non-empty data" warnings on every run, cached engine or
+        # not. They come from the global logger, so SessionOptions cannot mute
+        # them. Drop to ERROR so real failures still surface.
+        try:
+            onnxruntime.set_default_logger_severity(3)
+        except Exception:
+            pass
+        cache_dir = os.path.abspath(os.path.expanduser(SKYSEG_TRT_ENGINE_CACHE_DIR))
+        try:
+            os.makedirs(cache_dir, exist_ok=True)
+        except OSError:
+            cache_dir = None
+        if cache_dir is not None:
+            # Engine compilation costs ~15 s on first use; caching it makes
+            # every later run start in well under a second.
+            attempts.append((
+                ["TensorrtExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"],
+                [
+                    {
+                        "trt_engine_cache_enable": True,
+                        "trt_engine_cache_path": cache_dir,
+                        "trt_fp16_enable": True,
+                    },
+                    {},
+                    {},
+                ],
+            ))
+
+    if "CUDAExecutionProvider" in available:
+        attempts.append((["CUDAExecutionProvider", "CPUExecutionProvider"], [{}, {}]))
+
+    attempts.append((["CPUExecutionProvider"], [{}]))
+
+    for providers, provider_options in attempts:
+        try:
+            session = onnxruntime.InferenceSession(
+                model_path, providers=providers, provider_options=provider_options
+            )
+        except Exception as exc:
+            print(
+                f"[horizonstream] sky mask: {providers[0]} unavailable "
+                f"({type(exc).__name__}: {str(exc).splitlines()[0][:160]}), trying next provider",
+                flush=True,
+            )
+            continue
+        print(f"[horizonstream] sky mask providers: {session.get_providers()}", flush=True)
+        return session
+
+    raise RuntimeError(f"Failed to create an onnxruntime session for {model_path}")
 
 
 def run_skyseg(session, input_size, image):
@@ -133,7 +234,7 @@ def compute_sky_mask(image_paths, model_path: str, target_dir: str = None):
     if not os.path.exists(model_path):
         print(f"[horizonstream] skyseg.onnx not found: {model_path}", flush=True)
         return None
-    session = onnxruntime.InferenceSession(model_path)
+    session = _build_skyseg_session(model_path)
     masks = []
     for idx, image_path in enumerate(image_paths):
         mask_filepath = None

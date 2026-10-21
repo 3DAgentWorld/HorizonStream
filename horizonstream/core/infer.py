@@ -175,7 +175,10 @@ def _prepare_mask_for_model(mask, size, crop, patch_size, target_shape, square_o
         halfw = ((2 * cx) // patch_size) * (patch_size // 2)
         halfh = ((2 * cy) // patch_size) * (patch_size // 2)
         if not square_ok and w == h:
-            halfh = int(3 * halfw / 4)
+            # Must match the identical snapping in load_images_for_eval, or the
+            # mask covers a different crop than the image it masks.
+            half_step = max(patch_size // 2, 1)
+            halfh = max((int(3 * halfw / 4) // half_step) * half_step, half_step)
         target_w = 2 * halfw
         target_h = 2 * halfh
         if crop:
@@ -416,6 +419,7 @@ def run_inference_cfg(cfg: dict):
             offline_cam_map = motion_maps.get("offline_cam_map", None)
             last_cam_map = motion_maps.get("last_cam_map", None)
             lag_cam_map = motion_maps.get("lag_cam_map", None)
+            offline_error = motion_maps.get("offline_cam_map_error", "")
             if abs_pose_source not in {"online", "offline"}:
                 raise ValueError(f"output.abs_pose_source must be 'online' or 'offline', got: {abs_pose_source}")
             if abs_pose_source == "offline" and offline_cam_map is not None:
